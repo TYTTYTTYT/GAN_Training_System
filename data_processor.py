@@ -116,7 +116,7 @@ def ifft_data(data_f):
         d = np.empty([(N - 1) * 2, w], dtype=np.float)
         for j in range(w):
             reverse = np.conj(np.flip(data_f[i][1:N - 1, j]))
-            d[:, j] = ifft(np.concatenate([data_f[i][:, j], reverse]))
+            d[:, j] = ifft(np.concatenate([data_f[i][:, j], reverse])).real
 
         data.append(d)
 
