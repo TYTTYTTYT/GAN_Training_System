@@ -103,7 +103,7 @@ def _animation(interval, figure, ax1, ax2, queue, directory):
         func=_draw,
         interval=interval
     )
-    print('awfawe')
+
     with open('/home/tai/Desktop/hello.txt', 'w') as f:
         f.write(str(ani))
     plt.show()
