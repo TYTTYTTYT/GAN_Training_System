@@ -9,7 +9,8 @@ from data_reader import get_trajectory
 from config import set_trim_length
 import config
 from data_analyzer import average_cca_score
-from data_analyzer import average_spectra_diff
+from data_analyzer import average_spectra_diff_score
+from data_analyzer import average_spectra_cca_score
 from data_processor import fft_all_data
 from data_processor import fft_data
 from data_processor import ifft_data
@@ -18,21 +19,24 @@ from data_processor import standardize_all_data
 from data_processor import flatten_complex_data
 from data_processor import iflatten_complex_data
 from data_processor import time_stamp
+from data_processor import trim_data
 from dynamic_reporter import init_dynamic_report
 from dynamic_reporter import stop_dynamic_report
 from dynamic_reporter import report
 from data_reader import write_one_file
 from multiprocessing import set_start_method
+import random
 import os
 import time
 
 # Prepare the training set for this model
+print('Preparing the training set...')
 if config.TRIM_LENGTH is None:
     set_trim_length(300)
-standardize_all_data()
+origin = trim_data(standardize_all_data())
 data = fft_all_data()
 train_set = flatten_complex_data(data)
-
+print('Training set is ready!')
 
 class Complex_Fully_Connected_Discriminator(nn.Module):
     def __init__(self, dimension):
@@ -93,7 +97,7 @@ class Complex_Fully_Connected_GAN(nn.Module):
 
         # Variables to record training process
         self.losses = []
-        self.asd_scores = []
+        self.scores = []
 
         return
 
@@ -118,6 +122,8 @@ class Complex_Fully_Connected_GAN(nn.Module):
         return torch.randn([batch_size, 20], device=self.device)
 
     def train(self, train_set, batch_size, num_epoche, g_eta, d_eta, show=True):
+        print('Start training | batch_size:{a} | eta:{b}'.format(a=batch_size, b=g_eta))
+        global origin
         self.to(self.device)
         self.in_cpu = False
         train_set = torch.tensor(train_set, dtype=torch.float, device=self.device)
@@ -131,7 +137,9 @@ class Complex_Fully_Connected_GAN(nn.Module):
         N = train_set.size()[0]
         N = N - N % batch_size
 
-        best_asd_score = 0
+        best_asds_score = 0
+        best_cca_score = 0
+        best_scca_score = 0
 
         for epoch in range(num_epoche):
             tic = time.time()
@@ -172,22 +180,47 @@ class Complex_Fully_Connected_GAN(nn.Module):
                         # record model score
                         with torch.no_grad():
                             fake = self.generate(1).cpu()
+                        
+                        # Average spectra diff score
                         fake = iflatten_complex_data(fake)
-                        score = average_spectra_diff(fake[0])
-                        self.asd_scores.append([score])
-                        if score > best_asd_score:
-                            best_asd_score = score
+                        example = self.example()
+
+                        score_asds = average_spectra_diff_score(fake[0])
+                        try:
+                            score_scca = average_spectra_cca_score(fake[0])
+                        except:
+                            score_scca = 0
+                        try:
+                            score_cca = average_cca_score(example, random.choices(origin, k=10))
+                        except:
+                            score_cca = 0
+
+                        self.scores.append([score_asds, score_cca, score_scca])
+
+                        if score_asds > best_asds_score:
+                            best_asd_score = score_asds
                             if epoch > 0:
-                                torch.save(self.state_dict(), 'BEST_ASD')
+                                torch.save(self.state_dict(), 'BEST_ASDS')
+
+                        if score_cca > best_cca_score:
+                            best_cca_score = score_cca
+                            if epoch > 0:
+                                torch.save(self.state_dict(), 'BEST_CCA')
+
+                        if score_scca > best_scca_score:
+                            best_scca_score = score_scca
+                            if epoch > 0:
+                                torch.save(self.state_dict(), 'BEST_SCCA')
 
                         report(
                             loss_title='Training Loss Curve',
                             losses=self.losses,
                             loss_labels=['Generator', 'Discriminator'],
                             score_title='Model Score Curve',
-                            scores=self.asd_scores,
-                            score_labels=['ASD Score'],
-                            interval=100
+                            scores=self.scores,
+                            score_labels=['ASD', 'CCA', 'SCCA'],
+                            interval=100,
+                            example=example
                         )
 
             dt = time.time() - tic
@@ -202,15 +235,51 @@ class Complex_Fully_Connected_GAN(nn.Module):
         
         self.to(torch.device('cpu'))
         self.in_cpu = True
-        self.load_state_dict(torch.load('BEST_ASD'))
 
-        best_asd_path = os.path.join(
-            config.DATA_PATH,
-            'Trained_Models',
-            'Complex_Fully_Connected',
-            time_stamp() + '|ASD' + '|BC:' + str(batch_size) + '|g_eta:' + str(g_eta) + '|d_eta:' + str(d_eta)
-        )
-        torch.save(self.state_dict(), best_asd_path)
+        # Store the model with best ASD score
+        try:
+            self.load_state_dict(torch.load('BEST_ASDS'))
+            os.remove('BEST_ASDS')
+
+            best_asd_path = os.path.join(
+                config.DATA_PATH,
+                'Trained_Models',
+                'Complex_Fully_Connected',
+                time_stamp() + '|ASDS' + '|BC:' + str(batch_size) + '|g_eta:' + str(g_eta) + '|d_eta:' + str(d_eta)
+            )
+            torch.save(self.state_dict(), best_asd_path)
+        except:
+            pass
+
+        # Store the model with best CCA score
+        try:
+            self.load_state_dict(torch.load('BEST_CCA'))
+            os.remove('BEST_CCA')
+
+            best_cca_path = os.path.join(
+                config.DATA_PATH,
+                'Trained_Models',
+                'Complex_Fully_Connected',
+                time_stamp() + '|CCA' + '|BC:' + str(batch_size) + '|g_eta:' + str(g_eta) + '|d_eta:' + str(d_eta)
+            )
+            torch.save(self.state_dict(), best_cca_path)
+        except:
+            pass
+
+        # Store the model with best SCCA score
+        try:
+            self.load_state_dict(torch.load('BEST_SCCA'))
+            os.remove('BEST_SCCA')
+
+            best_scca_path = os.path.join(
+                config.DATA_PATH,
+                'Trained_Models',
+                'Complex_Fully_Connected',
+                time_stamp() + '|SCCA' + '|BC:' + str(batch_size) + '|g_eta:' + str(g_eta) + '|d_eta:' + str(d_eta)
+            )
+            torch.save(self.state_dict(), best_scca_path)
+        except:
+            pass
 
         return
 
@@ -218,7 +287,14 @@ class Complex_Fully_Connected_GAN(nn.Module):
 if __name__ == '__main__':
     set_start_method('spawn')   # To make dynamic reporter works
 
-    init_dynamic_report(3, '/home/tai/Desktop/example.png')
-    gan = Complex_Fully_Connected_GAN(6)
-    gan.train(train_set, 10, 2, 0.00001, 0.00001, True)
-    stop_dynamic_report()
+    for eta in [0.00001, 0.000001, 0.0001, 0.001]:
+        report_path = os.path.join(
+            config.DATA_PATH,
+            'Training_Reports',
+            'Complex_Fully_Connected',
+            time_stamp() + '|eta:' + str(eta) + '.png'
+        )
+        init_dynamic_report(3, report_path)
+        gan = Complex_Fully_Connected_GAN(6)
+        gan.train(train_set, 10, 1, eta, eta, True)
+        stop_dynamic_report()

@@ -737,9 +737,87 @@ def f(a, b):
 # %%
 f(*(1, 2, ))
 # %%
+import numpy as np
 from play import play_one_video_from
 from model_complex_fullconnected import Complex_Fully_Connected_GAN
+from data_processor import iflatten_complex_data
+from data_processor import ifft_data
+import matplotlib.pyplot as plt
+# %%
+net = play_one_video_from(Complex_Fully_Connected_GAN, '/home/tai/UG4_Project/training_system/BEST_ASD', args=(6, ))
+# %%
+spec = net.generate(1)
+# %%
+data = iflatten_complex_data(net.generate(1).detach())
+# %%
+spec
+# %%
+plt.plot(np.absolute(data[0]))
+# %%
+import numpy as np
+import matplotlib.pyplot as plt
 
 # %%
-play_one_video_from(Complex_Fully_Connected_GAN, '/home/tai/UG4_Project/training_system/BEST_ASD', args=(6, ))
+x = np.linspace(0, 100, 400)
+y1 = x * 3 - 300
+y2 = x * (-3) + 200
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))
+ax1.plot(x, y1, label='legend')
+ax1.plot(x, y2, label='haha')
+ax1.legend()
+ax1.set_xlabel('awef', fontsize=14)
+ax1.set_ylabel('awefd', fontsize=14)
+ax2.plot(x, y2)
+ax1.set_title('This is a graph', fontsize=18)
+ax2.set_title('This is another one')
+
+# %%
+plt.close(fig)
+# %%
+a = np.array([3 + 4j])
+# %%
+a
+# %%
+a.real
+# %%
+from data_reader import get_trajectory
+from data_analyzer import average_cca_score
+from data_processor import trim_data
+import random
+# %%
+data = trim_data(get_trajectory(), 300)
+# %%
+a = average_cca_score(np.ones((300, 6)), random.choices(data, k=10))
+# %%
+a
+# %%
+import numpy as np
+import matplotlib.pyplot as plt
+
+# %%
+x = np.linspace(0, 100, 400)
+y1 = x * 3 - 300
+y2 = x * (-3) + 200
+fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 15))
+plt.subplots_adjust(wspace=0.2, hspace=0.3)
+ax1.plot(x, y1, label='legend')
+ax1.plot(x, y2, label='haha')
+ax1.legend()
+ax1.set_xlabel('awef', fontsize=14)
+ax1.set_ylabel('awefd', fontsize=14)
+ax2.plot(x, y2)
+ax2.set_ylabel('awefawef')
+ax1.set_title('This is a graph', fontsize=18)
+ax2.set_title('This is another one')
+ax3.set_title('awfawef')
+ax4.clear()
+# %%
+from data_analyzer import average_spectra_diff
+import numpy as np
+# %%
+a = np.array([0, 1, 2, 3])
+# %%
+b = np.tanh(a)
+# %%
+1 - b
 # %%

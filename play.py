@@ -1,6 +1,5 @@
 # This module is used to play videos from model
 import os
-from model_complex_fullconnected import Complex_Fully_Connected_GAN
 from data_reader import write_one_file
 import torch
 import config

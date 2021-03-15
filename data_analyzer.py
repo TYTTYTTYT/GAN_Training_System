@@ -4,6 +4,7 @@ import numpy as np
 from sklearn.cross_decomposition import CCA
 from sklearn.decomposition import PCA
 from scipy.fft import fft
+import math
 
 def cca_score(X, Y):
     # Calculate the CCA score of the first component pair
@@ -19,7 +20,11 @@ def average_cca_score(X, data):
     for i in range(len(data)):
         cca_array[i] = cca_score(X, data[i])
 
-    return cca_array.mean()
+    score = cca_array.mean()
+    if score == np.nan:
+        score = 0
+    
+    return score
 
 def data_mean():
     if config.DATA_MEAN is not None:
@@ -73,28 +78,30 @@ def data_pca(n_cp=None):
 
     return pca
 
-def spectra_diff(X, Y):
+def spectra_cca(X, Y):
     # CCA score on sqrt(power)
     X = np.absolute(X).astype(np.float32)
     Y = np.absolute(Y).astype(np.float32)
 
     return cca_score(X, Y)
 
-    # # Averaged Euclidean distance on sqrt(power)
-    # X = np.absolute(X)
-    # Y = np.absolute(Y)
+def spectra_diff(X, Y):
+    # Averaged Euclidean distance on sqrt(power)
+    X = np.absolute(X)
+    Y = np.absolute(Y)
 
-    # distance = np.sum((X - Y)**2, axis=0)
-    # return float(np.sum(distance) / X.shape[1] / X.shape[0])
+    distance = np.sum(np.absolute((X - Y)), axis=0)
 
-    # # Average difference on all values
-    # Xa = np.absolute(X)
-    # Ya = np.absolute(Y)
+    return float(np.sum(distance) / X.shape[1] / X.shape[0])
 
-    # diff = np.sum(np.sum(np.absolute(Xa - Ya)))
-    # diff = float(diff)
+    # Average difference on all values
+    Xa = np.absolute(X)
+    Ya = np.absolute(Y)
 
-    # return diff / Xa.shape[0] / Xa.shape[1]
+    diff = np.sum(np.sum(np.absolute(Xa - Ya)))
+    diff = float(diff)
+
+    return diff / Xa.shape[0] / Xa.shape[1]
 
 def average_spectra():
     if config.AVERAGE_SPECTRA is not None:
@@ -117,3 +124,14 @@ def average_spectra_diff(X):
     diff = spectra_diff(X, average_spectra())
 
     return diff
+
+def average_spectra_diff_score(X):
+    diff = average_spectra_diff(X)
+    score = 1 - math.tanh(diff / 2)
+
+    return score
+
+def average_spectra_cca_score(X):
+    score = spectra_cca(X, average_spectra())
+
+    return score
