@@ -220,4 +220,5 @@ if __name__ == '__main__':
 
     init_dynamic_report(3, '/home/tai/Desktop/example.png')
     gan = Complex_Fully_Connected_GAN(6)
-    gan.train(train_set, 10, 10, 0.00001, 0.00001, True)
+    gan.train(train_set, 10, 2, 0.00001, 0.00001, True)
+    stop_dynamic_report()

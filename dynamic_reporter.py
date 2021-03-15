@@ -76,8 +76,8 @@ def stop_dynamic_report():
 
     if PROCESS is None:
         raise Exception('Dynamic report has not initialized!')
+    QUEUE.put('close')
     PROCESS.join()
-    PROCESS.terminate()
     
     PROCESS = None
     FIGURE = None
@@ -117,12 +117,18 @@ def _animation(interval, figure, ax1, ax2, queue, directory):
     return
 
 def _draw(i):
-    global AX
+    global AX1
+    global AX2
+    global FIGURE
     global QUEUE
     global DATA
 
     if not QUEUE.empty():
         DATA = QUEUE.get()
+        
+        if DATA == 'close':
+            plt.close(FIGURE)
+            return
         # DATA['loss_title'] = data['loss_title']
         # DATA['losses'].append(data['loss']),
         # DATA['loss_labels'] = data['loss_labels']
