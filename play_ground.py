@@ -821,3 +821,49 @@ b = np.tanh(a)
 # %%
 1 - b
 # %%
+from play import play_one_video_from
+from model_complex_fully_connected_adjust import Complex_Fully_Connected_Adjust_GAN
+from model_complex_fullconnected import Complex_Fully_Connected_GAN
+# %%
+play_one_video_from(Complex_Fully_Connected_GAN, '/home/tai/UG4_Project/Data/Trained_Models/Complex_Fully_Connected/2021-03-16|08:34:22|CCA|BC:10|g_eta:1e-05|d_eta:1e-05', args=(6, ))
+# %%
+from data_analyzer import average_spectra_diff_score
+from data_analyzer import average_cca_score
+from data_analyzer import average_spectra_cca_score
+from data_processor import standardize_all_data
+from data_processor import fft_all_data
+from data_processor import trim_data
+from config import set_trim_length
+import numpy as np
+import matplotlib.pyplot as plt
+import random
+from data_analyzer import average_spectra
+import matplotlib.pyplot as plt
+# %%
+set_trim_length(300)
+# %%
+fdata = fft_all_data()
+data = trim_data(standardize_all_data())
+# %%
+len(fdata)
+# %%
+fdata[0].shape
+# %%
+scores = np.zeros((12709, ))
+# %%
+scores.shape
+# %%
+for i in range(len(data)):
+    try:
+        scores[i] = average_cca_score(data[i], random.choices(data, k=10))
+    except:
+        pass
+# %%
+plt.scatter(x=np.linspace(0, 12709, 12709), y=scores)
+# %%
+scores.mean()
+# %%
+avg = average_spectra()
+# %%
+plt.plot(np.absolute(fdata[786]))
+# %%
