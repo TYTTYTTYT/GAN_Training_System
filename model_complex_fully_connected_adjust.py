@@ -1,6 +1,5 @@
 # This model uses a fully connected generator and a fully connected discriminator.
 # The input are complex numbers, but saperated into real and imaginary part
-import time
 import numpy as np
 from torch import nn
 from torch import optim
@@ -28,6 +27,7 @@ from data_reader import write_one_file
 from multiprocessing import set_start_method
 import random
 import os
+import time
 
 # Prepare the training set for this model
 print('Preparing the training set...')
@@ -44,10 +44,10 @@ class Complex_Fully_Connected_Discriminator(nn.Module):
         self.n_in = dimension * (config.TRIM_LENGTH // 2 + 1) * 2   # real part and imaginary part are saperated
 
         # hidden linear layers
-        self.linear1 = nn.Linear(self.n_in, self.n_in * 4)
-        self.linear2 = nn.Linear(self.n_in * 4, self.n_in * 2)
-        self.linear3 = nn.Linear(self.n_in * 2, self.n_in // 2)
-        self.linear4 = nn.Linear(self.n_in // 2, 1)
+        self.linear1 = nn.Linear(self.n_in, self.n_in)
+        self.linear2 = nn.Linear(self.n_in, self.n_in)
+        self.linear3 = nn.Linear(self.n_in, 1)
+        self.drop_layer = nn.Dropout(0.87)
 
         self.criterion = nn.BCELoss()
 
@@ -55,9 +55,10 @@ class Complex_Fully_Connected_Discriminator(nn.Module):
 
     def forward(self, x):
         x = F.leaky_relu(self.linear1(x), 0.1)
+        x = self.drop_layer(x)
         x = F.leaky_relu(self.linear2(x), 0.1)
-        x = F.leaky_relu(self.linear3(x), 0.1)
-        x = torch.sigmoid(self.linear4(x))
+        x = self.drop_layer(x)
+        x = torch.sigmoid(self.linear3(x))
 
         return x
 
@@ -85,9 +86,9 @@ class Complex_Fully_Connected_Generator(nn.Module):
         return out
 
 
-class Complex_Fully_Connected_GAN(nn.Module):
+class Complex_Fully_Connected_Adjust_GAN(nn.Module):
     def __init__(self, dimension):
-        super(Complex_Fully_Connected_GAN, self).__init__()
+        super(Complex_Fully_Connected_Adjust_GAN, self).__init__()
         self.dimension = dimension
         self.generator = Complex_Fully_Connected_Generator(dimension)
         self.discriminator = Complex_Fully_Connected_Discriminator(dimension)
@@ -236,14 +237,6 @@ class Complex_Fully_Connected_GAN(nn.Module):
         self.to(torch.device('cpu'))
         self.in_cpu = True
 
-        last_path = os.path.join(
-            config.DATA_PATH,
-            'Trained_Models',
-            'Complex_Fully_Connected',
-            time_stamp() + '|LAST' + '|BC:' + str(batch_size) + '|g_eta:' + str(g_eta) + '|d_eta:' + str(d_eta)
-        )
-        torch.save(self.state_dict(), last_path)
-
         # Store the model with best ASD score
         try:
             self.load_state_dict(torch.load('BEST_ASDS'))
@@ -252,7 +245,7 @@ class Complex_Fully_Connected_GAN(nn.Module):
             best_asd_path = os.path.join(
                 config.DATA_PATH,
                 'Trained_Models',
-                'Complex_Fully_Connected',
+                'Complex_Fully_Connected_Adjust',
                 time_stamp() + '|ASDS' + '|BC:' + str(batch_size) + '|g_eta:' + str(g_eta) + '|d_eta:' + str(d_eta)
             )
             torch.save(self.state_dict(), best_asd_path)
@@ -267,7 +260,7 @@ class Complex_Fully_Connected_GAN(nn.Module):
             best_cca_path = os.path.join(
                 config.DATA_PATH,
                 'Trained_Models',
-                'Complex_Fully_Connected',
+                'Complex_Fully_Connected_Adjust',
                 time_stamp() + '|CCA' + '|BC:' + str(batch_size) + '|g_eta:' + str(g_eta) + '|d_eta:' + str(d_eta)
             )
             torch.save(self.state_dict(), best_cca_path)
@@ -282,7 +275,7 @@ class Complex_Fully_Connected_GAN(nn.Module):
             best_scca_path = os.path.join(
                 config.DATA_PATH,
                 'Trained_Models',
-                'Complex_Fully_Connected',
+                'Complex_Fully_Connected_Adjust',
                 time_stamp() + '|SCCA' + '|BC:' + str(batch_size) + '|g_eta:' + str(g_eta) + '|d_eta:' + str(d_eta)
             )
             torch.save(self.state_dict(), best_scca_path)
@@ -300,10 +293,10 @@ if __name__ == '__main__':
             report_path = os.path.join(
                 config.DATA_PATH,
                 'Training_Reports',
-                'Complex_Fully_Connected',
+                'Complex_Fully_Connected_Adjust',
                 time_stamp() + '|eta:' + str(eta) + '.png'
             )
             init_dynamic_report(3, report_path)
-            gan = Complex_Fully_Connected_GAN(6)
+            gan = Complex_Fully_Connected_Adjust_GAN(6)
             gan.train(train_set, 10, 300, eta, eta, True)
             stop_dynamic_report()
