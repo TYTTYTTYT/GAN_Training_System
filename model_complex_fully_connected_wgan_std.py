@@ -27,6 +27,8 @@ from dynamic_reporter import stop_dynamic_report
 from dynamic_reporter import report
 from data_reader import write_one_file
 from multiprocessing import set_start_method
+from data_processor import standardize_data
+from data_processor import istandardize_data_with
 import random
 import os
 
@@ -86,9 +88,9 @@ class Complex_Fully_Connected_Generator(nn.Module):
         return out
 
 
-class Complex_Fully_Connected_WGAN(nn.Module):
+class Complex_Fully_Connected_WGAN_STD(nn.Module):
     def __init__(self, dimension):
-        super(Complex_Fully_Connected_WGAN, self).__init__()
+        super(Complex_Fully_Connected_WGAN_STD, self).__init__()
         self.dimension = dimension
         self.generator = Complex_Fully_Connected_Generator(dimension)
         self.discriminator = Complex_Fully_Connected_Linear_Discriminator(dimension)
@@ -99,6 +101,9 @@ class Complex_Fully_Connected_WGAN(nn.Module):
         # Variables to record training process
         self.losses = []
         self.scores = []
+
+        self.mean = 0
+        self.std = 0
 
         return
 
@@ -112,6 +117,7 @@ class Complex_Fully_Connected_WGAN(nn.Module):
         # Generate an example with numpy array data type
         x = self.generate(1).detach().cpu()
         x = np.array(x)
+        x = istandardize_data_with(x, self.mean, self.std)
         x = iflatten_complex_data(x)
         x = ifft_data(x)[0]
 
@@ -128,6 +134,7 @@ class Complex_Fully_Connected_WGAN(nn.Module):
         global origin
         self.to(self.device)
         self.in_cpu = False
+        train_set, self.mean, self.std = standardize_data(train_set)
         train_set = torch.tensor(train_set, dtype=torch.float, device=self.device)
 
         g_optimizer = optim.RMSprop(self.generator.parameters(), lr=g_eta)
@@ -222,7 +229,7 @@ class Complex_Fully_Connected_WGAN(nn.Module):
         last_path = os.path.join(
             config.DATA_PATH,
             'Trained_Models',
-            'Complex_Fully_Connected_WGAN',
+            'Complex_Fully_Connected_WGAN_STD',
             time_stamp() + '|LAST' + '|BC:' + str(batch_size) + '|g_eta:' + str(g_eta) + '|d_eta:' + str(d_eta) + '|n_critic:' + str(n_critic) + '|clip_value:' + str(clip_value)
         )
         torch.save(self.state_dict(), last_path)
@@ -235,7 +242,7 @@ class Complex_Fully_Connected_WGAN(nn.Module):
             best_asd_path = os.path.join(
                 config.DATA_PATH,
                 'Trained_Models',
-                'Complex_Fully_Connected_WGAN',
+                'Complex_Fully_Connected_WGAN_STD',
                 time_stamp() + '|WS' + '|BC:' + str(batch_size) + '|g_eta:' + str(g_eta) + '|d_eta:' + str(d_eta) + '|n_critic:' + str(n_critic) + '|clip_value:' + str(clip_value)
             )
             torch.save(self.state_dict(), best_asd_path)
@@ -249,14 +256,14 @@ if __name__ == '__main__':
     set_start_method('spawn')   # To make dynamic reporter works
 
     for eta in [0.00001, 0.0001, 0.000001, 0.001]:
-        for i in range(3):
+        for i in range(5):
             report_path = os.path.join(
                 config.DATA_PATH,
                 'Training_Reports',
-                'Complex_Fully_Connected_WGAN',
+                'Complex_Fully_Connected_WGAN_STD',
                 time_stamp() + '|eta:' + str(eta) + '|n_critic:' + str(10) + '|clip_value:' + str(0.01) + '.png'
             )
             init_dynamic_report(3, report_path)
-            gan = Complex_Fully_Connected_WGAN(6)
-            gan.train(train_set, 10, 400, eta, eta, 10, 0.01, True)
+            gan = Complex_Fully_Connected_WGAN_STD(6)
+            gan.train(train_set, 10, 100, eta, eta, 10, 0.01, True)
             stop_dynamic_report()

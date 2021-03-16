@@ -6,6 +6,53 @@ from data_analyzer import data_std
 from data_analyzer import data_pca
 from scipy.fft import fft, ifft
 import datetime
+import types
+
+def low_pass_filter(data, f):
+    n = len(data)
+    for i in range(n):
+        data[i] = data[i][:f, :]
+
+    return data
+
+def pad_zeros(x, n):
+    rows = x.shape[0]
+    columns = x.shape[1]
+
+    y = np.zeros((n, columns), dtype=np.float32)
+    for i in range(rows):
+        y[i, :] = x[i, :]
+
+    return y
+
+def pad_data_zeros(data, n):
+    for i in range(len(data)):
+        data[i] = pad_zeros(data[i], n)
+
+    return data
+
+
+def standardize_data(data):
+    if isinstance(data, list):
+        data = np.concatenate(data, axis=0)
+
+    mean = data.mean(axis=0)
+    std = data.std(axis=0)
+    print(mean)
+    print(std)
+
+    data = (data - mean)
+    for i in range(std.shape[0]):
+
+        if not np.isclose(std[i], 0.):
+            data[i, :] = data[i, :] / std[i]
+
+    return data, mean, std
+
+def istandardize_data_with(data, mean, std):
+    data = data * std + mean
+
+    return data
 
 def standardize_all_data():
     # Standardize all data
@@ -88,6 +135,7 @@ def ipca_data(data):
 
     return data
 
+
 def fft_data(data):
     # Apply DFT on each data and each dimension,
     # Data should be trimed first
@@ -139,7 +187,7 @@ def flatten_complex_data(data):
         raise Exception("Trim data first!")
 
     n = len(data)
-    length = config.TRIM_LENGTH // 2 + 1
+    length = data[0].shape[0]
     width = data[0].shape[1]
 
     flattened = np.empty([n, length * width * 2])
@@ -164,6 +212,29 @@ def iflatten_complex_data(flattened):
 
     n = flattened.shape[0]
     length = config.TRIM_LENGTH // 2 + 1
+    width = flattened.shape[1] // 2 // length
+
+    for i in range(n):
+        d = np.empty([length, width], dtype=np.complex128)
+        df = flattened[i, :]
+
+        real = df[:length * width]
+        img = df[length * width:]
+
+        real = real.reshape(length, width)
+        img = img.reshape(length, width)
+
+        d.real = real
+        d.imag = img
+
+        data.append(d)
+
+    return data
+
+def iflatten_complex_data_with(flattened, length):
+    data = []
+
+    n = flattened.shape[0]
     width = flattened.shape[1] // 2 // length
 
     for i in range(n):

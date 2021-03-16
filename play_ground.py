@@ -824,8 +824,9 @@ b = np.tanh(a)
 from play import play_one_video_from
 from model_complex_fully_connected_adjust import Complex_Fully_Connected_Adjust_GAN
 from model_complex_fullconnected import Complex_Fully_Connected_GAN
+from model_complex_fully_connected_wgan import Complex_Fully_Connected_WGAN
 # %%
-play_one_video_from(Complex_Fully_Connected_GAN, '/home/tai/UG4_Project/Data/Trained_Models/Complex_Fully_Connected/2021-03-16|08:34:22|CCA|BC:10|g_eta:1e-05|d_eta:1e-05', args=(6, ))
+play_one_video_from(Complex_Fully_Connected_WGAN, '/home/tai/UG4_Project/Data/Trained_Models/Complex_Fully_Connected_WGAN/2021-03-17|00:47:00|LAST|BC:10|g_eta:1e-05|d_eta:1e-05|n_critic:5', args=(6, ),translation=True)
 # %%
 from data_analyzer import average_spectra_diff_score
 from data_analyzer import average_cca_score
