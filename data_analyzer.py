@@ -62,8 +62,7 @@ def data_length(data):
 
 def data_pca(n_cp=None):
     if config.PCA is not None:
-        if config.PCA.n_components_ == n_cp:
-            return config.PCA
+        return config.PCA
 
     if config.STANDARDIZED is False:
         raise Exception("Standardize data before PCA!")

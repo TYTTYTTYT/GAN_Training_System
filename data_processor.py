@@ -95,7 +95,7 @@ def istandardize_data(data):
 
     for d in data:
         r = d * std + mean
-        recovered.append(d)
+        recovered.append(r)
 
     return recovered
 
@@ -117,8 +117,8 @@ def trim_data(data, length=None):
 
     return trimed
 
-def pca_data(data):
-    pca = data_pca()
+def pca_data(data, n):
+    pca = data_pca(n)
 
     n = len(data)
     for i in range(n):
@@ -256,3 +256,26 @@ def iflatten_complex_data_with(flattened, length):
 
 def time_stamp():
     return '{:%Y-%m-%d|%H:%M:%S}'.format(datetime.datetime.now())
+
+def overlap_and_add(x1, x2):
+    l1 = x1.shape[0]
+    l2 = x2.shape[0]
+
+    if l1 < l2:
+        l_over = l1 // 2
+    else:
+        l_over = l2 // 2
+
+    decrease = np.reshape(np.linspace(1, 0, num=l_over), (l_over, 1))
+    increase = 1 - decrease
+
+    x1_left = x1[:-l_over]
+    x1_overlap = x1[-l_over:]
+    x2_left = x2[l_over:]
+    x2_overlap = x2[:l_over]
+
+    overlap = x1_overlap * decrease + x2_overlap * increase
+
+    y = np.concatenate([x1_left, overlap, x2_left], axis=0)
+
+    return y
