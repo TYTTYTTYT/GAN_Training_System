@@ -189,7 +189,7 @@ def _draw(i):
 
         example = DATA['example']
 
-        spectra = np.absolute(fft_data([DATA['example']])[0]).real
+        spectra = np.log(np.absolute(fft_data([DATA['example']])[0]).real)
         AX3.plot(spectra)
 
         AX4.set_title('Example')

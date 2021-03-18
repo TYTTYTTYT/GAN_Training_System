@@ -3,8 +3,11 @@ import os
 from data_reader import write_one_file
 from data_processor import istandardize_data
 from data_processor import overlap_and_add
+import matplotlib.pyplot as plt
 import torch
 import config
+import random
+import numpy as np
 
 CMD = os.path.join(
     config.GALATEA_PATH,
@@ -55,3 +58,11 @@ def play_long_video_from(model, path, length, format='rov', args=None, translati
     os.system(cmd)
 
     return y
+
+def random_log_spetra_from(data):
+    x = random.choice(data)
+
+    plt.plot(1 / np.log(x))
+    plt.show()
+
+    return

@@ -900,3 +900,27 @@ a[0:-147]
 # %%
 a[-147:].shape
 # %%
+import torch
+# %%
+a = torch.tensor([[1, 2, 3.], [.13, 23, 1]])
+# %%
+b = torch.exp(a)
+# %%
+b
+# %%
+type(b.size()[0])
+# %%a
+
+# %%
+a
+# %%
+a[:, -2:] * b[:, :2]
+# %%
+from data_processor import fft_all_data
+from config import set_trim_length
+from play import random_log_spetra_from
+# %%
+set_trim_length(300)
+data = fft_all_data()
+random_log_spetra_from(data)
+# %%
