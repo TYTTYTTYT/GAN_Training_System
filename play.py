@@ -8,6 +8,12 @@ import torch
 import config
 import random
 import numpy as np
+from data_reader import _read_one_file
+from data_processor import standardize_data
+from data_analyzer import data_mean
+from data_analyzer import data_std
+from data_processor import fft_data
+from data_processor import trim_data
 
 CMD = os.path.join(
     config.GALATEA_PATH,
@@ -62,7 +68,40 @@ def play_long_video_from(model, path, length, format='rov', args=None, translati
 def random_log_spetra_from(data):
     x = random.choice(data)
 
-    plt.plot(1 / np.log(x))
+    plt.plot(np.log(x))
     plt.show()
 
     return
+
+def draw_spectra_of(path):
+    x = _read_one_file(path)
+    x, _, _ = standardize_data(x, data_mean(), data_std())
+    x = fft_data([x])[0]
+
+    x = np.absolute(x)
+
+    plt.plot(x)
+    plt.show()
+
+    return x
+
+def draw_log_spectra_of(path):
+    x = _read_one_file(path)
+    x, _, _ = standardize_data(x, data_mean(), data_std())
+    x = fft_data([x])[0]
+
+    x = np.absolute(x)
+    x = np.log(x)
+
+    plt.plot(x)
+    plt.show()
+
+    return x
+
+def draw_trajectory_of(path):
+    x = _read_one_file(path)
+
+    plt.plot(x)
+    plt.show()
+
+    return x

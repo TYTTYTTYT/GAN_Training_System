@@ -4,6 +4,7 @@ import numpy as np
 from sklearn.cross_decomposition import CCA
 from sklearn.decomposition import PCA
 from scipy.fft import fft
+from scipy.fft import fftfreq
 import math
 
 def cca_score(X, Y):
@@ -134,3 +135,20 @@ def average_spectra_cca_score(X):
     score = spectra_cca(X, average_spectra())
 
     return score
+
+def get_single_side_frequency(trim_length=None):
+    T = 0.01
+    if trim_length is None:
+        N = config.TRIM_LENGTH
+    else:
+        N = trim_length
+
+    if N is None:
+        raise Exception('Set trim length first!')
+
+    freq = fftfreq(N, T)[:N // 2 + 1]
+    for i in range(freq.shape[0]):
+        if freq[i] < 0:
+            freq[i] = -freq[i]
+
+    return freq

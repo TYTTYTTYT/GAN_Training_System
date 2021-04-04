@@ -4,22 +4,18 @@ from data_reader import get_trajectory
 from data_analyzer import data_mean
 from data_analyzer import data_std
 from data_analyzer import data_pca
+from data_analyzer import get_single_side_frequency
 from scipy.fft import fft, ifft
 import datetime
 import types
+from scipy import signal
 
-def low_pass_filter(data, f):
-    n = len(data)
-    for i in range(n):
-        data[i] = data[i][:f, :]
-
-    return data
 
 def pad_zeros(x, n):
     rows = x.shape[0]
     columns = x.shape[1]
 
-    y = np.zeros((n, columns), dtype=np.float32)
+    y = np.zeros((n, columns), dtype=x.dtype)
     for i in range(rows):
         y[i, :] = x[i, :]
 
@@ -32,20 +28,18 @@ def pad_data_zeros(data, n):
     return data
 
 
-def standardize_data(data):
+def standardize_data(data, mean=None, std=None):
     if isinstance(data, list):
         data = np.concatenate(data, axis=0)
 
-    mean = data.mean(axis=0)
-    std = data.std(axis=0)
+    if mean is None:
+        mean = data.mean(axis=0)
+    if std is None:
+        std = data.std(axis=0)
     print(mean)
     print(std)
 
-    data = (data - mean)
-    for i in range(std.shape[0]):
-
-        if not np.isclose(std[i], 0.):
-            data[i, :] = data[i, :] / std[i]
+    data = (data - mean) / std
 
     return data, mean, std
 
@@ -279,3 +273,77 @@ def overlap_and_add(x1, x2):
     y = np.concatenate([x1_left, overlap, x2_left], axis=0)
 
     return y
+
+def low_pass_filter(example):
+    x = np.copy(example)
+    b, a = signal.butter(3, 0.1)
+    x = np.array(x)
+    y = np.empty_like(x)
+    print(x.shape)
+    for i in range(x.shape[1]):
+
+        y[:, i] = signal.filtfilt(b, a, x[:, i])
+
+    return y
+
+def low_pass_filter_list(data):
+    filtered = []
+    for d in data:
+        filtered.append(low_pass_filter(d))
+
+    return filtered
+
+def window(data, window_type):
+    data_length = data[0].shape[0]
+
+    window = np.reshape(signal.get_window(window_type, data_length), (data_length, 1))
+
+    data_windowed = []
+
+    for d in data:
+        d = np.array(d)
+        d = d * window
+        data_windowed.append(d)
+
+    return data_windowed, window
+
+def iwindow(data, win, per=0.8):
+    data_length = data[0].shape[0]
+    idx_start = int(data_length * (1 - per) // 2)
+    idx_end = int(data_length * (1 - (1 - per) / 2))
+
+    data_recovered = []
+
+    for d in data:
+        r = d[idx_start:idx_end, :] / win[idx_start: idx_end]
+        data_recovered.append(r)
+
+    return data_recovered
+
+def lpf_dimension_reduction(data, frequency, trim_length=None):
+    if trim_length is None:
+        trim_length = config.TRIM_LENGTH
+
+    bins = data[0].shape[0]
+    freq = get_single_side_frequency(trim_length)
+
+    idx = freq <= frequency
+    dim = np.sum(idx)
+
+    data_reducted = []
+    for d in data:
+        data_reducted.append(d[idx])
+
+    return data_reducted, dim
+
+def data_center_part(data, per):
+    center_parts = []
+    data_length = data[0].shape[0]
+    idx_start = int(data_length * (1 - per) // 2)
+    idx_end = int(data_length * (1 - (1 - per) / 2))
+
+    for d in data:
+        r = d[idx_start:idx_end]
+        center_parts.append(r)
+
+    return center_parts

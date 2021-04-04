@@ -29,13 +29,17 @@ from data_reader import write_one_file
 from multiprocessing import set_start_method
 import random
 import os
+from data_processor import window
+from data_processor import iwindow
+
 
 # Prepare the training set for this model
 print('Preparing the training set...')
 if config.TRIM_LENGTH is None:
-    set_trim_length(1000)
+    set_trim_length(300)
 origin = trim_data(standardize_all_data())
-data = fft_all_data()
+windowed, win = window(origin, 'hamming')
+data = fft_data(windowed)
 train_set = flatten_complex_data(data)
 print('Training set is ready!')
 
@@ -86,9 +90,9 @@ class Complex_Fully_Connected_Generator(nn.Module):
         return out
 
 
-class Complex_Fully_Connected_WGAN(nn.Module):
+class Complex_Fully_Connected_WGAN_Window(nn.Module):
     def __init__(self, dimension):
-        super(Complex_Fully_Connected_WGAN, self).__init__()
+        super(Complex_Fully_Connected_WGAN_Window, self).__init__()
         self.dimension = dimension
         self.generator = Complex_Fully_Connected_Generator(dimension)
         self.discriminator = Complex_Fully_Connected_Linear_Discriminator(dimension)
@@ -110,10 +114,12 @@ class Complex_Fully_Connected_WGAN(nn.Module):
 
     def example(self):
         # Generate an example with numpy array data type
+        global win
         x = self.generate(1).detach().cpu()
         x = np.array(x)
         x = iflatten_complex_data(x)
-        x = ifft_data(x)[0]
+        x = ifft_data(x)
+        x = iwindow(x, win, 0.6)[0]
 
         return x
 
@@ -222,7 +228,7 @@ class Complex_Fully_Connected_WGAN(nn.Module):
         last_path = os.path.join(
             config.DATA_PATH,
             'Trained_Models',
-            'Complex_Fully_Connected_WGAN',
+            'Complex_Fully_Connected_WGAN_Window',
             time_stamp() + '|LAST' + '|BC:' + str(batch_size) + '|g_eta:' + str(g_eta) + '|d_eta:' + str(d_eta) + '|n_critic:' + str(n_critic) + '|clip_value:' + str(clip_value)
         )
         torch.save(self.state_dict(), last_path)
@@ -235,7 +241,7 @@ class Complex_Fully_Connected_WGAN(nn.Module):
             best_asd_path = os.path.join(
                 config.DATA_PATH,
                 'Trained_Models',
-                'Complex_Fully_Connected_WGAN',
+                'Complex_Fully_Connected_WGAN_Window',
                 time_stamp() + '|WS' + '|BC:' + str(batch_size) + '|g_eta:' + str(g_eta) + '|d_eta:' + str(d_eta) + '|n_critic:' + str(n_critic) + '|clip_value:' + str(clip_value)
             )
             torch.save(self.state_dict(), best_asd_path)
@@ -253,10 +259,10 @@ if __name__ == '__main__':
             report_path = os.path.join(
                 config.DATA_PATH,
                 'Training_Reports',
-                'Complex_Fully_Connected_WGAN',
+                'Complex_Fully_Connected_WGAN_Window',
                 time_stamp() + '|eta:' + str(eta) + '|n_critic:' + str(10) + '|clip_value:' + str(0.01) + '.png'
             )
             init_dynamic_report(3, report_path)
-            gan = Complex_Fully_Connected_WGAN(6)
+            gan = Complex_Fully_Connected_WGAN_Window(6)
             gan.train(train_set, 10, 200, eta, eta, 10, 0.01, True)
             stop_dynamic_report()

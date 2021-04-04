@@ -18,6 +18,7 @@ from multiprocessing import Queue
 from matplotlib.animation import FuncAnimation
 from data_processor import fft_data
 import time
+from data_analyzer import get_single_side_frequency
 
 # Initialize local public variables
 PROCESS = None
@@ -144,6 +145,8 @@ def _draw(i):
 
     if not QUEUE.empty():
         DATA = QUEUE.get()
+        example_length = DATA['example'].shape[0]
+        freq = get_single_side_frequency(example_length)
         
         if DATA == 'close':
             plt.close(FIGURE)
@@ -185,12 +188,14 @@ def _draw(i):
 
         AX3.set_title('Spectra')
         AX3.set_xlabel('Frequency')
-        AX3.set_ylabel('Log Power')
+        AX3.set_ylabel('Power (dB)')
 
         example = DATA['example']
 
-        spectra = np.log(np.absolute(fft_data([DATA['example']])[0]).real)
-        AX3.plot(spectra)
+        spectra = np.absolute(fft_data([DATA['example']])[0]).real
+        m = np.amax(spectra)
+        spectra = 20 * np.log10(spectra / m)
+        AX3.plot(freq, spectra)
 
         AX4.set_title('Example')
         AX4.set_xlabel('Time')

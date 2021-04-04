@@ -13,9 +13,17 @@ import config
 from data_analyzer import average_cca_score
 from data_analyzer import average_spectra_diff_score
 from data_analyzer import average_spectra_cca_score
+from data_analyzer import get_single_side_frequency
 from data_processor import fft_all_data
 from data_processor import fft_data
 from data_processor import ifft_data
+from data_processor import iflatten_complex_data_with
+from data_processor import low_pass_filter_list
+from data_processor import lpf_dimension_reduction
+from data_processor import window
+from data_processor import iwindow
+from data_processor import data_center_part
+from data_processor import pad_data_zeros
 from data_processor import pca_data
 from data_processor import standardize_all_data
 from data_processor import flatten_complex_data
@@ -30,27 +38,29 @@ from multiprocessing import set_start_method
 import random
 import os
 
+# time.sleep(13500)
 # Prepare the training set for this model
 print('Preparing the training set...')
 if config.TRIM_LENGTH is None:
-    set_trim_length(1000)
-origin = trim_data(standardize_all_data())
-data = fft_all_data()
-train_set = flatten_complex_data(data)
+    set_trim_length(300)
+train_set = trim_data(standardize_all_data())
+train_set, WIN = window(train_set, 'hamming')
+train_set = fft_data(train_set)
+train_set, dim = lpf_dimension_reduction(train_set, frequency=5)
+train_set = flatten_complex_data(train_set)
+print(dim)
 print('Training set is ready!')
 
-class Complex_Fully_Connected_Linear_Discriminator(nn.Module):
+class Complex_Fully_Connected_Linear_Discriminator_LPF(nn.Module):
     def __init__(self, dimension):
-        super(Complex_Fully_Connected_Linear_Discriminator, self).__init__()
-        self.n_in = dimension * (config.TRIM_LENGTH // 2 + 1) * 2   # real part and imaginary part are saperated
+        super(Complex_Fully_Connected_Linear_Discriminator_LPF, self).__init__()
+        self.n_in = dimension * 2 * 6   # real part and imaginary part are saperated
 
         # hidden linear layers
         self.linear1 = nn.Linear(self.n_in, self.n_in)
         self.linear2 = nn.Linear(self.n_in, self.n_in)
         self.linear3 = nn.Linear(self.n_in, self.n_in)
         self.linear4 = nn.Linear(self.n_in, 1)
-
-        self.criterion = nn.BCELoss()
 
         return
 
@@ -63,11 +73,11 @@ class Complex_Fully_Connected_Linear_Discriminator(nn.Module):
         return x
 
 
-class Complex_Fully_Connected_Generator(nn.Module):
+class Complex_Fully_Connected_Generator_LPF(nn.Module):
     def __init__(self, dimension):
-        super(Complex_Fully_Connected_Generator, self).__init__()
-        self.n_in = 20
-        self.n_out = dimension * (config.TRIM_LENGTH // 2 + 1) * 2
+        super(Complex_Fully_Connected_Generator_LPF, self).__init__()
+        self.n_in = 10
+        self.n_out = dimension * 2 * 6
 
         # linear layers
         self.linear1 = nn.Linear(self.n_in, self.n_out)
@@ -86,12 +96,12 @@ class Complex_Fully_Connected_Generator(nn.Module):
         return out
 
 
-class Complex_Fully_Connected_WGAN(nn.Module):
+class Complex_Fully_Connected_WGAN_LPF_W(nn.Module):
     def __init__(self, dimension):
-        super(Complex_Fully_Connected_WGAN, self).__init__()
+        super(Complex_Fully_Connected_WGAN_LPF_W, self).__init__()
         self.dimension = dimension
-        self.generator = Complex_Fully_Connected_Generator(dimension)
-        self.discriminator = Complex_Fully_Connected_Linear_Discriminator(dimension)
+        self.generator = Complex_Fully_Connected_Generator_LPF(dimension)
+        self.discriminator = Complex_Fully_Connected_Linear_Discriminator_LPF(dimension)
 
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.in_cpu = True
@@ -112,16 +122,18 @@ class Complex_Fully_Connected_WGAN(nn.Module):
         # Generate an example with numpy array data type
         x = self.generate(1).detach().cpu()
         x = np.array(x)
-        x = iflatten_complex_data(x)
-        x = ifft_data(x)[0]
+        x = iflatten_complex_data_with(x, 16)
+        x = pad_data_zeros(x, get_single_side_frequency().shape[0])
+        x = ifft_data(x)
+        x = iwindow(x, WIN, 0.8)
 
-        return x
+        return x[0]
 
     def noise(self, batch_size):
         if self.in_cpu:
-            return torch.randn([batch_size, 20])
+            return torch.randn([batch_size, 10])
 
-        return torch.randn([batch_size, 20], device=self.device)
+        return torch.randn([batch_size, 10], device=self.device)
 
     def train(self, train_set, batch_size, num_epoche, g_eta, d_eta, n_critic, clip_value, show=True):
         print('Start training | batch_size:{a} | eta:{b}'.format(a=batch_size, b=g_eta))
@@ -222,7 +234,7 @@ class Complex_Fully_Connected_WGAN(nn.Module):
         last_path = os.path.join(
             config.DATA_PATH,
             'Trained_Models',
-            'Complex_Fully_Connected_WGAN',
+            'Complex_Fully_Connected_WGAN_LPF_W',
             time_stamp() + '|LAST' + '|BC:' + str(batch_size) + '|g_eta:' + str(g_eta) + '|d_eta:' + str(d_eta) + '|n_critic:' + str(n_critic) + '|clip_value:' + str(clip_value)
         )
         torch.save(self.state_dict(), last_path)
@@ -235,7 +247,7 @@ class Complex_Fully_Connected_WGAN(nn.Module):
             best_asd_path = os.path.join(
                 config.DATA_PATH,
                 'Trained_Models',
-                'Complex_Fully_Connected_WGAN',
+                'Complex_Fully_Connected_WGAN_LPF_W',
                 time_stamp() + '|WS' + '|BC:' + str(batch_size) + '|g_eta:' + str(g_eta) + '|d_eta:' + str(d_eta) + '|n_critic:' + str(n_critic) + '|clip_value:' + str(clip_value)
             )
             torch.save(self.state_dict(), best_asd_path)
@@ -248,15 +260,15 @@ class Complex_Fully_Connected_WGAN(nn.Module):
 if __name__ == '__main__':
     set_start_method('spawn')   # To make dynamic reporter works
 
-    for eta in [0.00001, 0.0001]:
+    for eta in [0.00001, 0.0001, 0.001]:
         for i in range(3):
             report_path = os.path.join(
                 config.DATA_PATH,
                 'Training_Reports',
-                'Complex_Fully_Connected_WGAN',
-                time_stamp() + '|eta:' + str(eta) + '|n_critic:' + str(10) + '|clip_value:' + str(0.01) + '.png'
+                'Complex_Fully_Connected_WGAN_LPF_W',
+                time_stamp() + '|eta:' + str(eta) + '|n_critic:' + str(5) + '|clip_value:' + str(0.01) + '.png'
             )
             init_dynamic_report(3, report_path)
-            gan = Complex_Fully_Connected_WGAN(6)
-            gan.train(train_set, 10, 200, eta, eta, 10, 0.01, True)
+            gan = Complex_Fully_Connected_WGAN_LPF_W(dim)
+            gan.train(train_set, 10, 300, eta, eta, 5, 0.01, True)
             stop_dynamic_report()

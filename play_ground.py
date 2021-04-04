@@ -902,9 +902,9 @@ a[-147:].shape
 # %%
 import torch
 # %%
-a = torch.tensor([[1, 2, 3.], [.13, 23, 1]])
+a = torch.tensor([[1, 2, -3.], [.13, 23, 1]])
 # %%
-b = torch.exp(a)
+b = torch.log(a)
 # %%
 b
 # %%
@@ -919,8 +919,59 @@ a[:, -2:] * b[:, :2]
 from data_processor import fft_all_data
 from config import set_trim_length
 from play import random_log_spetra_from
+from data_processor import fft_data
 # %%
 set_trim_length(300)
 data = fft_all_data()
+# %%
 random_log_spetra_from(data)
+
+# %%
+from play import draw_spectra_of
+from play import draw_log_spectra_of
+from play import draw_trajectory_of
+from data_processor import low_pass_filter
+import matplotlib.pyplot as plt
+from data_reader import write_one_file
+
+# %%
+draw_spectra_of('/home/tai/Desktop/Examples/WGAN-Gesture1.rov')
+# %%
+draw_log_spectra_of('/home/tai/Desktop/Examples/WGAN-Stable1.rov')
+# %%
+x = draw_trajectory_of('/home/tai/Desktop/Examples/MLP-Gesture4.rov')
+
+# %%
+y = low_pass_filter(x)
+plt.plot(y)
+# %%
+write_one_file('/home/tai/Desktop/Examples/MLP-Gesture4-lpf.rov', y)
+# %%
+from scipy import signal
+import matplotlib.pyplot as plt
+
+# %%
+a = signal.get_window('hamming', 300)
+# %%
+plt.plot(a)
+# %%
+a.shape
+# %%
+import numpy as np
+# %%
+x = [np.ones((300, 6), dtype=float)]
+# %%
+fx = fft_data(x)
+# %%
+fx
+# %%
+l = np.linspace(0, 1, 300)
+# %%
+l = np.reshape(l, (300, 1))
+# %%
+x[0] = x[0] * l
+# %%
+x[0] = x[0] * np.reshape(a, (300, 1))
+# %%
+plt.plot(np.log(fx[0]))
 # %%

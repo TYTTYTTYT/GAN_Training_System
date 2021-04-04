@@ -70,10 +70,10 @@ class Complex_Fully_Connected_Generator(nn.Module):
         self.n_out = dimension * (config.TRIM_LENGTH // 2 + 1) * 2
 
         # linear layers
-        self.linear1 = nn.Linear(self.n_in, self.n_out * 2)
-        self.linear2 = nn.Linear(self.n_out * 2, self.n_out * 2)
-        self.linear3 = nn.Linear(self.n_out * 2, self.n_out // 2)
-        self.linear4 = nn.Linear(self.n_out // 2, self.n_out * 2)
+        self.linear1 = nn.Linear(self.n_in, self.n_out)
+        self.linear2 = nn.Linear(self.n_out, self.n_out)
+        self.linear3 = nn.Linear(self.n_out, self.n_out)
+        self.linear4 = nn.Linear(self.n_out, self.n_out)
 
         return
 
@@ -82,9 +82,8 @@ class Complex_Fully_Connected_Generator(nn.Module):
         x = F.leaky_relu(self.linear2(x), 0.1)
         x = F.leaky_relu(self.linear3(x), 0.1)
         x = self.linear4(x)
-        out = torch.tanh(x[:, :self.n_out]) * torch.exp(x[:, -self.n_out:])
 
-        return out
+        return x
 
 
 class Complex_Fully_Connected_WGAN_Exp(nn.Module):
@@ -131,7 +130,7 @@ class Complex_Fully_Connected_WGAN_Exp(nn.Module):
         self.in_cpu = False
         train_set = torch.tensor(train_set, dtype=torch.float, device=self.device)
 
-        g_optimizer = optim.RMSprop(self.generator.parameters(), lr=g_eta)
+        g_optimizer = optim.RMSprop(self.generator.parameters(), lr=g_eta, weight_decay=0.001)
         d_optimizer = optim.RMSprop(self.discriminator.parameters(), lr=d_eta)
 
         # g_target = torch.ones(batch_size, 1).to(self.device)
@@ -251,15 +250,16 @@ if __name__ == '__main__':
 
     # for eta in [0.00001, 0.0001]:
     #     for i in range(3):
-    g_eta = 0.00001
-    d_eta = 0.00001
-    report_path = os.path.join(
-        config.DATA_PATH,
-        'Training_Reports',
-        'Complex_Fully_Connected_WGAN_Exp',
-        time_stamp() + '|g_eta:' + str(g_eta) + '|d_eta:' + str(d_eta) + '|n_critic:' + str(10) + '|clip_value:' + str(0.01) + '.png'
-    )
-    init_dynamic_report(3, report_path)
-    gan = Complex_Fully_Connected_WGAN_Exp(6)
-    gan.train(train_set, 10, 100, g_eta, d_eta, 5, 0.1, True)
-    stop_dynamic_report()
+    for i in range(3):
+        g_eta = 0.00001
+        d_eta = 0.00001
+        report_path = os.path.join(
+            config.DATA_PATH,
+            'Training_Reports',
+            'Complex_Fully_Connected_WGAN_Exp',
+            time_stamp() + '|g_eta:' + str(g_eta) + '|d_eta:' + str(d_eta) + '|n_critic:' + str(10) + '|clip_value:' + str(0.01) + '.png'
+        )
+        init_dynamic_report(5, report_path)
+        gan = Complex_Fully_Connected_WGAN_Exp(6)
+        gan.train(train_set, 10, 300, g_eta, d_eta, 10, 0.01, True)
+        stop_dynamic_report()
