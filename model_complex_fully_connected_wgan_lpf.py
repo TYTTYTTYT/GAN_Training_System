@@ -56,10 +56,10 @@ class Complex_Fully_Connected_Linear_Discriminator_LPF(nn.Module):
         self.n_in = dimension * 2 * 6   # real part and imaginary part are saperated
 
         # hidden linear layers
-        self.linear1 = nn.Linear(self.n_in, self.n_in)
-        self.linear2 = nn.Linear(self.n_in, self.n_in)
-        self.linear3 = nn.Linear(self.n_in, self.n_in)
-        self.linear4 = nn.Linear(self.n_in, 1)
+        self.linear1 = nn.Linear(self.n_in, self.n_in * 8)
+        self.linear2 = nn.Linear(self.n_in * 8, self.n_in * 8)
+        self.linear3 = nn.Linear(self.n_in * 8, self.n_in * 8)
+        self.linear4 = nn.Linear(self.n_in * 8, 1)
 
         return
 
@@ -79,10 +79,10 @@ class Complex_Fully_Connected_Generator_LPF(nn.Module):
         self.n_out = dimension * 2 * 6
 
         # linear layers
-        self.linear1 = nn.Linear(self.n_in, self.n_out)
-        self.linear2 = nn.Linear(self.n_out, self.n_out)
-        self.linear3 = nn.Linear(self.n_out, self.n_out)
-        self.linear4 = nn.Linear(self.n_out, self.n_out)
+        self.linear1 = nn.Linear(self.n_in, self.n_out * 8)
+        self.linear2 = nn.Linear(self.n_out * 8, self.n_out * 8)
+        self.linear3 = nn.Linear(self.n_out * 8, self.n_out * 8)
+        self.linear4 = nn.Linear(self.n_out * 8, self.n_out)
 
         return
 

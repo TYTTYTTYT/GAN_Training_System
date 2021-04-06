@@ -119,7 +119,7 @@ class Complex_Fully_Connected_WGAN_Window(nn.Module):
         x = np.array(x)
         x = iflatten_complex_data(x)
         x = ifft_data(x)
-        x = iwindow(x, win, 0.6)[0]
+        # x = iwindow(x, win, 0.6)[0]
 
         return x
 

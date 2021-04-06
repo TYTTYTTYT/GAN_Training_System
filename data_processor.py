@@ -347,3 +347,23 @@ def data_center_part(data, per):
         center_parts.append(r)
 
     return center_parts
+
+def griffin(data, win):
+    data_windowed = []
+    for d in data:
+        data_windowed.append(np.array(d * win))
+
+    print('awf ' + str(len(data_windowed)))
+
+    half = data[0].shape[0] // 2
+    win2 = win[:half]**2 + win[-half:]**2 + 0.001
+    result = data_windowed[0]
+
+    for d in data_windowed[1:]:
+        result[-half:] += d[:half]
+        result[-half:] = result[-half:] / win2
+        result = np.concatenate((result, d[half:]))
+
+    result = result[half + 1:-half - 1]
+
+    return result

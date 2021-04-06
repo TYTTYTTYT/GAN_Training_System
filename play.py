@@ -14,6 +14,7 @@ from data_analyzer import data_mean
 from data_analyzer import data_std
 from data_processor import fft_data
 from data_processor import trim_data
+from data_processor import griffin
 
 CMD = os.path.join(
     config.GALATEA_PATH,
@@ -105,3 +106,26 @@ def draw_trajectory_of(path):
     plt.show()
 
     return x
+
+def play_long_video_istft(model, path, n, win, format='rov', args=None, translation=True):
+    net = model(*args)
+    net.load_state_dict(torch.load(path))
+
+    data = []
+    for i in range(n):
+        data.append(net.example()[0])
+
+    print('data ' + str(len(data)))
+
+    result = griffin(data, win)
+    result = istandardize_data([result])[0]
+
+    write_one_file('example', result, format=format)
+
+    cmd = CMD + PAR1 + 'example' + PAR2
+    if translation:
+        cmd += TRANSLATION
+
+    os.system(cmd)
+
+    return result

@@ -44,9 +44,10 @@ print('Preparing the training set...')
 if config.TRIM_LENGTH is None:
     set_trim_length(300)
 train_set = trim_data(standardize_all_data())
-train_set, WIN = window(train_set, 'hamming')
+train_set, WIN = window(train_set, 'hann')
+print(WIN.shape)
 train_set = fft_data(train_set)
-train_set, dim = lpf_dimension_reduction(train_set, frequency=5)
+train_set, dim = lpf_dimension_reduction(train_set, frequency=10)
 train_set = flatten_complex_data(train_set)
 print(dim)
 print('Training set is ready!')
@@ -57,10 +58,10 @@ class Complex_Fully_Connected_Linear_Discriminator_LPF(nn.Module):
         self.n_in = dimension * 2 * 6   # real part and imaginary part are saperated
 
         # hidden linear layers
-        self.linear1 = nn.Linear(self.n_in, self.n_in)
-        self.linear2 = nn.Linear(self.n_in, self.n_in)
-        self.linear3 = nn.Linear(self.n_in, self.n_in)
-        self.linear4 = nn.Linear(self.n_in, 1)
+        self.linear1 = nn.Linear(self.n_in, self.n_in * 12)
+        self.linear2 = nn.Linear(self.n_in * 12, self.n_in * 12)
+        self.linear3 = nn.Linear(self.n_in * 12, self.n_in * 12)
+        self.linear4 = nn.Linear(self.n_in * 12, 1)
 
         return
 
@@ -80,10 +81,10 @@ class Complex_Fully_Connected_Generator_LPF(nn.Module):
         self.n_out = dimension * 2 * 6
 
         # linear layers
-        self.linear1 = nn.Linear(self.n_in, self.n_out)
-        self.linear2 = nn.Linear(self.n_out, self.n_out)
-        self.linear3 = nn.Linear(self.n_out, self.n_out)
-        self.linear4 = nn.Linear(self.n_out, self.n_out)
+        self.linear1 = nn.Linear(self.n_in, self.n_out * 12)
+        self.linear2 = nn.Linear(self.n_out * 12, self.n_out * 12)
+        self.linear3 = nn.Linear(self.n_out * 12, self.n_out * 12)
+        self.linear4 = nn.Linear(self.n_out * 12, self.n_out)
 
         return
 
@@ -120,12 +121,13 @@ class Complex_Fully_Connected_WGAN_LPF_W(nn.Module):
 
     def example(self):
         # Generate an example with numpy array data type
+        global dim
         x = self.generate(1).detach().cpu()
         x = np.array(x)
-        x = iflatten_complex_data_with(x, 16)
+        x = iflatten_complex_data_with(x, 31)
         x = pad_data_zeros(x, get_single_side_frequency().shape[0])
         x = ifft_data(x)
-        x = iwindow(x, WIN, 0.8)
+        # x = iwindow(x, WIN, 0.8)
 
         return x[0]
 
@@ -260,7 +262,7 @@ class Complex_Fully_Connected_WGAN_LPF_W(nn.Module):
 if __name__ == '__main__':
     set_start_method('spawn')   # To make dynamic reporter works
 
-    for eta in [0.00001, 0.0001, 0.001]:
+    for eta in [0.0001, 0.00001, 0.001]:
         for i in range(3):
             report_path = os.path.join(
                 config.DATA_PATH,
@@ -270,5 +272,5 @@ if __name__ == '__main__':
             )
             init_dynamic_report(3, report_path)
             gan = Complex_Fully_Connected_WGAN_LPF_W(dim)
-            gan.train(train_set, 10, 300, eta, eta, 5, 0.01, True)
+            gan.train(train_set, 10, 200, eta, eta, 5, 0.01, True)
             stop_dynamic_report()

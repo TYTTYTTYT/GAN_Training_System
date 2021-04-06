@@ -145,12 +145,13 @@ def _draw(i):
 
     if not QUEUE.empty():
         DATA = QUEUE.get()
-        example_length = DATA['example'].shape[0]
-        freq = get_single_side_frequency(example_length)
         
         if DATA == 'close':
             plt.close(FIGURE)
             return
+
+        example_length = DATA['example'].shape[0]
+        freq = get_single_side_frequency(example_length)
         # DATA['loss_title'] = data['loss_title']
         # DATA['losses'].append(data['loss']),
         # DATA['loss_labels'] = data['loss_labels']

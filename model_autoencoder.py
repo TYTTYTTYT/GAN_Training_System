@@ -32,7 +32,7 @@ CODE_LENGTH = 100
 # Prepare the training set for this model
 print('Preparing the training set...')
 if config.TRIM_LENGTH is None:
-    set_trim_length(1000)
+    set_trim_length(300)
 origin = trim_data(standardize_all_data())
 data = fft_all_data()
 train_set = flatten_complex_data(data)

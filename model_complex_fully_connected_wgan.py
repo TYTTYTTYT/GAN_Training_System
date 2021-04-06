@@ -33,7 +33,7 @@ import os
 # Prepare the training set for this model
 print('Preparing the training set...')
 if config.TRIM_LENGTH is None:
-    set_trim_length(1000)
+    set_trim_length(300)
 origin = trim_data(standardize_all_data())
 data = fft_all_data()
 train_set = flatten_complex_data(data)
@@ -258,5 +258,5 @@ if __name__ == '__main__':
             )
             init_dynamic_report(3, report_path)
             gan = Complex_Fully_Connected_WGAN(6)
-            gan.train(train_set, 10, 200, eta, eta, 10, 0.01, True)
+            gan.train(train_set, 10, 3, eta, eta, 10, 0.01, True)
             stop_dynamic_report()
