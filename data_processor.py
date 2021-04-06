@@ -275,6 +275,14 @@ def overlap_and_add(x1, x2):
 
     return y
 
+def overlap_and_add_data(data):
+    y = data[0]
+
+    for i in range(1, len(data)):
+        y = overlap_and_add(y, data[i])
+
+    return y
+
 def low_pass_filter(example):
     x = np.copy(example)
     b, a = signal.butter(3, 0.1)
@@ -368,3 +376,16 @@ def griffin(data, win):
     result = result[half + 1:-half - 1]
 
     return result
+
+def flatten_real_data(data):
+    flattened = []
+    l = data[0].shape[0]
+    w = data[0].shape[1]
+
+    for d in data:
+        d = np.array(d)
+        d = np.reshape(d, (l * w,))
+
+        flattened.append(d)
+
+    return flattened

@@ -305,5 +305,7 @@ if __name__ == '__main__':
             )
             init_dynamic_report(3, report_path)
             gan = Complex_Fully_Connected_GAN(6)
+            print(sum(p.numel() for p in gan.parameters()))
+
             gan.train(train_set, 10, 300, eta, eta, True)
             stop_dynamic_report()

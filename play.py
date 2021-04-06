@@ -3,6 +3,7 @@ import os
 from data_reader import write_one_file
 from data_processor import istandardize_data
 from data_processor import overlap_and_add
+from data_processor import overlap_and_add_data
 import matplotlib.pyplot as plt
 import torch
 import config
@@ -15,6 +16,13 @@ from data_analyzer import data_std
 from data_processor import fft_data
 from data_processor import trim_data
 from data_processor import griffin
+from data_processor import ifft_data
+from data_processor import iflatten_complex_data_with
+from data_processor import pad_data_zeros
+from data_analyzer import get_single_side_frequency
+from data_processor import iwindow
+from data_processor import low_pass_filter
+from data_processor import standardize_all_data
 
 CMD = os.path.join(
     config.GALATEA_PATH,
@@ -48,13 +56,16 @@ def play_one_video_from(model, path, format='rov', args=None, translation=True):
 
     return net
 
-def play_long_video_from(model, path, length, format='rov', args=None, translation=True):
+def play_long_video_from(model, path, length, format='rov', args=None, translation=True, lpf=True):
     net = model(*args)
     net.load_state_dict(torch.load(path))
 
     y = get_real_example(net)
     while y.shape[0] < length:
         y = overlap_and_add(y, get_real_example(net))
+
+    if lpf:
+        y = low_pass_filter(y)
 
     write_one_file('example', y, format=format)
 
@@ -107,7 +118,7 @@ def draw_trajectory_of(path):
 
     return x
 
-def play_long_video_istft(model, path, n, win, format='rov', args=None, translation=True):
+def play_long_video_istft(model, path, n, win, format='rov', args=None, translation=True, lpf=True):
     net = model(*args)
     net.load_state_dict(torch.load(path))
 
@@ -119,6 +130,8 @@ def play_long_video_istft(model, path, n, win, format='rov', args=None, translat
 
     result = griffin(data, win)
     result = istandardize_data([result])[0]
+    if lpf:
+        result = low_pass_filter(result)
 
     write_one_file('example', result, format=format)
 
@@ -129,3 +142,73 @@ def play_long_video_istft(model, path, n, win, format='rov', args=None, translat
     os.system(cmd)
 
     return result
+
+def play_rnn_OLA(model, path, n, win, format='rov', args=None, translation=True, lpf=True):
+    net = model(*args)
+    net.load_state_dict(torch.load(path))
+
+    x = net.generate(1, n).detach().squeeze().numpy()
+    
+    x = iflatten_complex_data_with(x, 31)
+    x = pad_data_zeros(x, get_single_side_frequency().shape[0])
+    x = ifft_data(x)
+    x = iwindow(x, win + 0.001, 0.9)
+    x = istandardize_data(x)
+
+    x = overlap_and_add_data(x)
+    if lpf:
+        x = low_pass_filter(x)
+
+    write_one_file('example', x, format=format)
+
+    cmd = CMD + PAR1 + 'example' + PAR2
+    if translation:
+        cmd += TRANSLATION
+
+    os.system(cmd)
+
+    return x
+
+def play_rnn_istft(model, path, n, win, format='rov', args=None, translation=True, lpf=True):
+    net = model(*args)
+    net.load_state_dict(torch.load(path))
+
+    x = net.generate(1, n).detach().squeeze().numpy()
+    
+    x = iflatten_complex_data_with(x, 31)
+    x = pad_data_zeros(x, get_single_side_frequency().shape[0])
+    x = ifft_data(x)
+
+    x = griffin(x, win)
+    x = istandardize_data([x])[0]
+    if lpf:
+        x = low_pass_filter(x)
+
+    write_one_file('example', x, format=format)
+
+    cmd = CMD + PAR1 + 'example' + PAR2
+    if translation:
+        cmd += TRANSLATION
+
+    os.system(cmd)
+
+    return x
+
+def play_real(length, translation=True):
+    data = standardize_all_data()
+    data = trim_data(data, length)
+    data = istandardize_data(data)
+    x = random.choice(data)
+    print(type(x))
+    print(x.shape)
+    x = np.array(x)
+
+    write_one_file('example', x, format='rov')
+
+    cmd = CMD + PAR1 + 'example' + PAR2
+    if translation:
+        cmd += TRANSLATION
+
+    os.system(cmd)
+
+    return x
