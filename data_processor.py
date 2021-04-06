@@ -94,12 +94,13 @@ def istandardize_data(data):
     return recovered
 
 def trim_data(data, length=None):
-    if length is not None:
+    if length is not None and config.TRIM_LENGTH is None:
         config.TRIM_LENGTH = length
-    elif config.TRIM_LENGTH is None:
+    elif config.TRIM_LENGTH is None and length is None:
         raise Exception("Trim length has not been setted up!")
+    elif length is None:
+        length = config.TRIM_LENGTH
     
-    length = config.TRIM_LENGTH
     trimed = []
 
     for d in data:

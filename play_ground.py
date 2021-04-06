@@ -975,3 +975,22 @@ x[0] = x[0] * np.reshape(a, (300, 1))
 # %%
 plt.plot(np.log(fx[0]))
 # %%
+import torch
+
+# %%
+a = torch.tensor([3, 1])
+a# %%
+
+# %%
+b = torch.tensor([4, 2])
+# %%
+a.real
+# %%
+a = torch.randn(2, 3, 2)
+# %%
+a
+# %%
+a = a.view_as_complex(a)
+# %%
+torch.__version__
+# %%
